@@ -1,0 +1,39 @@
+# dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# env / secrets
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# prisma
+server/prisma/migrations/dev.db*
+*.db
+*.db-journal
+
+# build output
+dist/
+build/
+coverage/
+*.tsbuildinfo
+
+# logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# editors / os
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db
+
+# client cache
+client/.vite/
+.cache/

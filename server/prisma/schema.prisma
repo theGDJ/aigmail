@@ -1,0 +1,258 @@
+// Prisma schema for AI Mail Summarizer
+// Entities: User, EmailAccount, Email, Summary, ActionItem, Deadline,
+// Translation, Preference, Digest, Notification (see README "Database design").
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Provider {
+  GMAIL
+  OUTLOOK
+  MOCK
+}
+
+enum SummaryLength {
+  SHORT
+  MEDIUM
+  DETAILED
+}
+
+enum LanguageCode {
+  EN
+  HI
+  TA
+  ES
+  FR
+  DE
+}
+
+enum Priority {
+  URGENT
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum Category {
+  WORK
+  EDUCATION
+  FINANCE
+  SHOPPING
+  TRAVEL
+  PERSONAL
+  PROMOTIONS
+  SOCIAL
+  IMPORTANT
+  OTHER
+}
+
+enum DeadlineType {
+  EXPLICIT
+  MEETING
+  APPOINTMENT
+  GENERAL
+}
+
+enum RiskLevel {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  profileImage String?
+  googleId     String?  @unique
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  accounts      EmailAccount[]
+  preference    Preference?
+  notifications Notification[]
+  digests       Digest[]
+
+  @@index([email])
+}
+
+model EmailAccount {
+  id           String    @id @default(cuid())
+  userId       String
+  provider     Provider  @default(GMAIL)
+  email        String
+  accessToken  String?   @db.Text
+  refreshToken String?   @db.Text
+  tokenExpiry  DateTime?
+  scope        String?
+  historyId    String?
+  lastSyncedAt DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  emails Email[]
+
+  @@unique([provider, email])
+  @@index([userId])
+}
+
+model Email {
+  id             String   @id @default(cuid())
+  accountId      String
+  externalId     String
+  threadId       String?
+  sender         String
+  senderName     String?
+  recipient      String?
+  subject        String
+  body           String   @db.Text
+  snippet        String?
+  receivedAt     DateTime
+  isRead         Boolean  @default(false)
+  isStarred      Boolean  @default(false)
+  hasAttachments Boolean  @default(false)
+  labels         String[] @default([])
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  account      EmailAccount   @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  summary      Summary?
+  translations Translation[]
+
+  @@unique([accountId, externalId])
+  @@index([accountId, receivedAt])
+  @@index([receivedAt])
+  @@index([isRead])
+}
+
+model Summary {
+  id                String        @id @default(cuid())
+  emailId           String        @unique
+  summary           String        @db.Text
+  keyPoints         String[]      @default([])
+  priority          Priority      @default(MEDIUM)
+  category          Category      @default(OTHER)
+  importanceScore   Int           @default(50)
+  importanceReasons String[]      @default([])
+  requiresReply     Boolean       @default(false)
+  replyRationale    String?
+  riskLevel         RiskLevel     @default(LOW)
+  riskReasons       String[]      @default([])
+  language          LanguageCode  @default(EN)
+  engine            String        @default("local")
+  modelUsed         String?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  email        Email         @relation(fields: [emailId], references: [id], onDelete: Cascade)
+  actionItems  ActionItem[]
+  deadlines    Deadline[]
+  translations Translation[]
+
+  @@index([priority])
+  @@index([category])
+  @@index([createdAt])
+}
+
+model ActionItem {
+  id        String    @id @default(cuid())
+  summaryId String
+  task      String
+  deadline  DateTime?
+  dueText   String?
+  completed Boolean   @default(false)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  summary Summary @relation(fields: [summaryId], references: [id], onDelete: Cascade)
+
+  @@index([summaryId])
+  @@index([completed])
+}
+
+model Deadline {
+  id          String       @id @default(cuid())
+  summaryId   String
+  description String
+  date        DateTime?
+  dateText    String?
+  type        DeadlineType @default(GENERAL)
+  createdAt   DateTime     @default(now())
+
+  summary Summary @relation(fields: [summaryId], references: [id], onDelete: Cascade)
+
+  @@index([summaryId])
+  @@index([date])
+}
+
+model Translation {
+  id             String       @id @default(cuid())
+  emailId        String?
+  summaryId      String?
+  targetLanguage LanguageCode
+  content        String       @db.Text
+  engine         String       @default("local")
+  createdAt      DateTime     @default(now())
+
+  email   Email?   @relation(fields: [emailId], references: [id], onDelete: Cascade)
+  summary Summary? @relation(fields: [summaryId], references: [id], onDelete: Cascade)
+
+  @@unique([emailId, targetLanguage])
+  @@unique([summaryId, targetLanguage])
+}
+
+model Preference {
+  id                    String        @id @default(cuid())
+  userId                String        @unique
+  summaryLength         SummaryLength @default(MEDIUM)
+  language              LanguageCode  @default(EN)
+  notificationEnabled   Boolean       @default(true)
+  digestEnabled         Boolean       @default(true)
+  digestTime            String        @default("08:00")
+  timezone              String        @default("UTC")
+  phishingWarnings      Boolean       @default(true)
+  voiceSummaries        Boolean       @default(false)
+  notifiedImportanceMin Int           @default(80)
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Digest {
+  id        String   @id @default(cuid())
+  userId    String
+  forDate   DateTime @db.Date
+  content   Json
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, forDate])
+  @@index([userId])
+}
+
+model Notification {
+  id        String    @id @default(cuid())
+  userId    String
+  emailId   String?
+  title     String
+  body      String    @db.Text
+  priority  Priority  @default(MEDIUM)
+  riskLevel RiskLevel @default(LOW)
+  isRead    Boolean   @default(false)
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
+  @@index([createdAt])
+}

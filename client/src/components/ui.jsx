@@ -1,0 +1,143 @@
+import { PRIORITY_STYLES, RISK_STYLES, CATEGORY_ICONS, titleCase } from '../utils/format.js';
+
+export const Spinner = ({ className = 'h-4 w-4' }) => (
+  <svg className={`animate-spin ${className}`} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+    <circle cx="12" cy="12" r="10" stroke="currentColor" strokeOpacity="0.25" strokeWidth="3" />
+    <path d="M22 12a10 10 0 0 0-10-10" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+  </svg>
+);
+
+export const PriorityBadge = ({ priority, withDot = true }) => {
+  const style = PRIORITY_STYLES[priority] || PRIORITY_STYLES.MEDIUM;
+  return (
+    <span className={`chip ${style.chip}`}>
+      {withDot && <span className={`h-1.5 w-1.5 rounded-full ${style.dot}`} />}
+      {style.label}
+    </span>
+  );
+};
+
+export const CategoryBadge = ({ category }) => (
+  <span className="chip bg-slate-100 text-slate-700 ring-1 ring-slate-200">
+    <span aria-hidden="true">{CATEGORY_ICONS[category] || '📄'}</span>
+    {titleCase(category || 'OTHER')}
+  </span>
+);
+
+export const RiskBadge = ({ level, compact = false }) => {
+  const style = RISK_STYLES[level] || RISK_STYLES.LOW;
+  if (compact && level === 'LOW') return null;
+  return <span className={`chip ${style.chip}`}>⚠ {style.label}</span>;
+};
+
+export const ImportanceMeter = ({ score = 0, size = 'md' }) => {
+  const color = score >= 80 ? 'bg-rose-500' : score >= 60 ? 'bg-amber-500' : score >= 35 ? 'bg-sky-500' : 'bg-slate-400';
+  return (
+    <div className={size === 'sm' ? 'w-24' : 'w-40'}>
+      <div className="mb-1 flex items-baseline justify-between">
+        <span className="text-xs font-semibold text-slate-500">Importance</span>
+        <span className="text-xs font-bold text-slate-700">{score}/100</span>
+      </div>
+      <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-200">
+        <div className={`h-full rounded-full ${color} transition-all`} style={{ width: `${Math.min(score, 100)}%` }} />
+      </div>
+    </div>
+  );
+};
+
+export const StatCard = ({ label, value, hint, tone = 'default', icon }) => {
+  const tones = {
+    default: 'text-slate-900',
+    danger: 'text-rose-600',
+    warning: 'text-amber-600',
+    success: 'text-emerald-600',
+    brand: 'text-brand-600',
+  };
+  return (
+    <div className="card p-4">
+      <div className="flex items-start justify-between">
+        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</p>
+        {icon && <span aria-hidden="true">{icon}</span>}
+      </div>
+      <p className={`mt-2 text-2xl font-bold ${tones[tone]}`}>{value}</p>
+      {hint && <p className="mt-1 text-xs text-slate-500">{hint}</p>}
+    </div>
+  );
+};
+
+export const SectionTitle = ({ children, action }) => (
+  <div className="mb-2 flex items-center justify-between">
+    <h3 className="text-xs font-bold uppercase tracking-wide text-slate-500">{children}</h3>
+    {action}
+  </div>
+);
+
+export const EmptyState = ({ title, description, action, icon = '📭' }) => (
+  <div className="flex flex-col items-center justify-center gap-2 px-6 py-12 text-center">
+    <span className="text-3xl" aria-hidden="true">
+      {icon}
+    </span>
+    <p className="font-semibold text-slate-700">{title}</p>
+    {description && <p className="max-w-sm text-sm text-slate-500">{description}</p>}
+    {action}
+  </div>
+);
+
+export const ErrorState = ({ error, onRetry }) => (
+  <div className="card border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">
+    <p className="font-semibold">Something went wrong</p>
+    <p className="mt-1">{error?.message || 'Unknown error'}</p>
+    {onRetry && (
+      <button type="button" className="btn-secondary mt-3" onClick={onRetry}>
+        Try again
+      </button>
+    )}
+  </div>
+);
+
+export const Skeleton = ({ className = 'h-4 w-full' }) => <div className={`skeleton ${className}`} />;
+
+export const Modal = ({ open, onClose, title, children, footer, wide = false }) => {
+  if (!open) return null;
+  return (
+    <div className="fixed inset-0 z-40 flex items-start justify-center overflow-y-auto bg-slate-900/40 p-4 backdrop-blur-sm">
+      <div className={`card animate-fade-in mt-10 w-full ${wide ? 'max-w-3xl' : 'max-w-xl'}`}>
+        <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
+          <h2 className="font-semibold text-slate-800">{title}</h2>
+          <button type="button" className="btn-ghost px-2 py-1 text-lg leading-none" onClick={onClose} aria-label="Close">
+            ×
+          </button>
+        </div>
+        <div className="max-h-[70vh] overflow-y-auto px-4 py-4">{children}</div>
+        {footer && <div className="flex justify-end gap-2 border-t border-slate-200 px-4 py-3">{footer}</div>}
+      </div>
+    </div>
+  );
+};
+
+export const EngineBadge = ({ engine }) => {
+  const live = engine === 'openai';
+  return (
+    <span
+      className={`chip ${live ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200' : 'bg-slate-100 text-slate-600 ring-1 ring-slate-200'}`}
+      title={live ? 'Generated by OpenAI' : 'Generated by the built-in deterministic engine (no API key configured)'}
+    >
+      {live ? '⚡ OpenAI' : '⚙ Local engine'}
+    </span>
+  );
+};
+
+export default {
+  Spinner,
+  PriorityBadge,
+  CategoryBadge,
+  RiskBadge,
+  ImportanceMeter,
+  StatCard,
+  SectionTitle,
+  EmptyState,
+  ErrorState,
+  Skeleton,
+  Modal,
+  EngineBadge,
+};

@@ -1,0 +1,29 @@
+{
+  "name": "ai-mail-summarizer",
+  "version": "1.0.0",
+  "private": true,
+  "description": "AI Mail Summarizer - AI-powered email management (Gmail + OpenAI) with React, Express, PostgreSQL and Prisma",
+  "workspaces": [
+    "server",
+    "client"
+  ],
+  "scripts": {
+    "dev": "concurrently -n server,client -c blue,magenta \"npm:dev:server\" \"npm:dev:client\"",
+    "dev:server": "npm --workspace server run dev",
+    "dev:client": "npm --workspace client run dev",
+    "build": "npm --workspace server run build && npm --workspace client run build",
+    "start": "npm --workspace server run start",
+    "test": "npm --workspace server run test",
+    "db:migrate": "npm --workspace server run db:migrate",
+    "db:push": "npm --workspace server run db:push",
+    "db:seed": "npm --workspace server run db:seed",
+    "db:studio": "npm --workspace server run db:studio",
+    "setup": "npm install && npm run db:migrate && npm run db:seed"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
