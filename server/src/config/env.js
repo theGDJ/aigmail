@@ -26,7 +26,7 @@ const NODE_ENV = process.env.NODE_ENV || 'development';
 const isProd = NODE_ENV === 'production';
 const googleClientId = process.env.GOOGLE_CLIENT_ID || '';
 const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET || '';
-const openaiApiKey = process.env.OPENAI_API_KEY || '';
+const groqApiKey = process.env.GROQ_API_KEY || '';
 
 export const env = {
   NODE_ENV,
@@ -55,8 +55,8 @@ export const env = {
   GOOGLE_OAUTH_REDIRECT_URI:
     process.env.GOOGLE_OAUTH_REDIRECT_URI || 'http://localhost:4000/auth/google/callback',
 
-  OPENAI_API_KEY: openaiApiKey,
-  OPENAI_MODEL: process.env.OPENAI_MODEL || 'gpt-4o-mini',
+  GROQ_API_KEY: groqApiKey,
+  GROQ_MODEL: process.env.GROQ_MODEL || 'openai/gpt-oss-20b',
   AI_REQUEST_TIMEOUT_MS: int(process.env.AI_REQUEST_TIMEOUT_MS, 45000),
 
   ENABLE_DEMO_LOGIN: bool(process.env.ENABLE_DEMO_LOGIN, true),
@@ -68,11 +68,11 @@ export const env = {
 // back to the deterministic local engine ("demo mode").
 export const features = {
   googleOAuth: Boolean(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET),
-  openai: Boolean(env.OPENAI_API_KEY),
+  groq: Boolean(env.GROQ_API_KEY),
   demoLogin: env.ENABLE_DEMO_LOGIN,
   mockProvider: env.ENABLE_MOCK_PROVIDER,
 };
 
-export const aiEngine = features.openai ? 'openai' : 'local';
+export const aiEngine = features.groq ? 'groq' : 'local';
 
 export default env;

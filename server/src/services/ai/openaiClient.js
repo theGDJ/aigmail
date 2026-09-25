@@ -13,12 +13,13 @@ const log = createLogger('openai');
 
 let client = null;
 const getClient = () => {
-  if (!features.openai) {
-    throw new AppError('AI provider not configured (set OPENAI_API_KEY).', 503, 'AI_NOT_CONFIGURED');
+  if (!features.groq) {
+    throw new AppError('AI provider not configured (set GROQ_API_KEY).', 503, 'AI_NOT_CONFIGURED');
   }
   if (!client) {
     client = new OpenAI({
-      apiKey: env.OPENAI_API_KEY,
+      apiKey: env.GROQ_API_KEY,
+      baseURL: 'https://api.groq.com/openai/v1',
       timeout: env.AI_REQUEST_TIMEOUT_MS,
       maxRetries: 0, // retries are handled explicitly below for visibility
     });
@@ -57,7 +58,7 @@ const chat = async ({ system, user, maxTokens = 1200, temperature = 0.2, retries
   while (true) {
     try {
       const response = await openai.chat.completions.create({
-        model: env.OPENAI_MODEL,
+        model: env.GROQ_MODEL,
         temperature,
         max_tokens: maxTokens,
         response_format: { type: 'json_object' },
@@ -66,7 +67,7 @@ const chat = async ({ system, user, maxTokens = 1200, temperature = 0.2, retries
           { role: 'user', content: user },
         ],
       });
-      return { content: response.choices?.[0]?.message?.content || '', model: env.OPENAI_MODEL };
+      return { content: response.choices?.[0]?.message?.content || '', model: env.GROQ_MODEL };
     } catch (err) {
       attempt += 1;
       if (attempt > retries || !isRetryable(err)) throw mapError(err);
