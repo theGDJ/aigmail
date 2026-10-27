@@ -42,7 +42,7 @@ export const createApp = () => {
   // Health probe (no auth, no rate limit).
   app.get('/health', async (_req, res) => {
     try {
-      await prisma.$queryRaw`SELECT 1`;
+      await prisma.$runCommandRaw({ ping: 1 });
       res.json({ status: 'ok', database: 'up', env: env.NODE_ENV, time: new Date().toISOString() });
     } catch (err) {
       res.status(503).json({ status: 'degraded', database: 'down', message: err.message });

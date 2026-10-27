@@ -12,22 +12,44 @@ import createLogger from '../../lib/logger.js';
 const log = createLogger('openai');
 
 let client = null;
+let activeProvider = null;
+
 const getClient = () => {
-  if (!features.groq) {
-    throw new AppError('AI provider not configured (set GROQ_API_KEY).', 503, 'AI_NOT_CONFIGURED');
+  if (!features.ai) {
+    throw new AppError(
+      'AI provider not configured (set OPENAI_API_KEY or GROQ_API_KEY).',
+      503,
+      'AI_NOT_CONFIGURED',
+    );
   }
   if (!client) {
-    client = new OpenAI({
-      apiKey: env.GROQ_API_KEY,
-      baseURL: 'https://api.groq.com/openai/v1',
-      timeout: env.AI_REQUEST_TIMEOUT_MS,
-      maxRetries: 0, // retries are handled explicitly below for visibility
-    });
+    if (features.groq) {
+      activeProvider = 'groq';
+      client = new OpenAI({
+        apiKey: env.GROQ_API_KEY,
+        baseURL: 'https://api.groq.com/openai/v1',
+        timeout: env.AI_REQUEST_TIMEOUT_MS,
+        maxRetries: 0, // retries are handled explicitly below for visibility
+      });
+    } else {
+      activeProvider = 'openai';
+      const clientConfig = {
+        apiKey: env.OPENAI_API_KEY,
+        timeout: env.AI_REQUEST_TIMEOUT_MS,
+        maxRetries: 0,
+      };
+      if (env.OPENAI_BASE_URL) {
+        clientConfig.baseURL = env.OPENAI_BASE_URL;
+      }
+      client = new OpenAI(clientConfig);
+    }
   }
-  return client;
+  return { client, provider: activeProvider };
 };
 
-export const isEnabled = () => features.openai;
+export const isEnabled = () => features.ai;
+export const getActiveProvider = () => activeProvider || (features.groq ? 'groq' : features.openai ? 'openai' : 'local');
+export const getActiveModel = () => (features.groq ? env.GROQ_MODEL : env.OPENAI_MODEL);
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -39,7 +61,7 @@ const isRetryable = (err) =>
 const mapError = (err) => {
   if (err instanceof AppError) return err;
   if (err?.status === 401 || err?.status === 403) {
-    return new AppError('OpenAI rejected the API key.', 502, 'AI_AUTH_FAILED');
+    return new AppError('AI provider rejected the API key.', 502, 'AI_AUTH_FAILED');
   }
   if (err?.status === 429) return new AppError('AI rate limit reached, try again shortly.', 429, 'AI_RATE_LIMITED');
   if (err?.code === 'APIConnectionTimeoutError' || err?.code === 'ETIMEDOUT') {
@@ -51,23 +73,27 @@ const mapError = (err) => {
   return upstream(`AI request failed: ${err?.message || 'unknown error'}`);
 };
 
-const chat = async ({ system, user, maxTokens = 1200, temperature = 0.2, retries = 2 }) => {
-  const openai = getClient();
+const chat = async ({ system, user, maxTokens = 2000, temperature = 0.2, retries = 2, jsonMode = true }) => {
+  const { client: openai, provider } = getClient();
+  const model = provider === 'groq' ? env.GROQ_MODEL : env.OPENAI_MODEL;
   let attempt = 0;
   // eslint-disable-next-line no-constant-condition
   while (true) {
     try {
-      const response = await openai.chat.completions.create({
-        model: env.GROQ_MODEL,
+      const payload = {
+        model,
         temperature,
         max_tokens: maxTokens,
-        response_format: { type: 'json_object' },
         messages: [
           { role: 'system', content: system },
           { role: 'user', content: user },
         ],
-      });
-      return { content: response.choices?.[0]?.message?.content || '', model: env.GROQ_MODEL };
+      };
+      if (jsonMode) {
+        payload.response_format = { type: 'json_object' };
+      }
+      const response = await openai.chat.completions.create(payload);
+      return { content: response.choices?.[0]?.message?.content || '', model };
     } catch (err) {
       attempt += 1;
       if (attempt > retries || !isRetryable(err)) throw mapError(err);
@@ -92,10 +118,22 @@ export const parseJsonResponse = (content = '') => {
     return JSON.parse(candidate);
   } catch {
     // Common model slips: trailing commas.
+    const withoutTrailingCommas = candidate.replace(/,\s*([}\]])/g, '$1');
     try {
-      return JSON.parse(candidate.replace(/,\s*([}\]])/g, '$1'));
+      return JSON.parse(withoutTrailingCommas);
     } catch {
-      throw new AppError('AI response was not valid JSON.', 502, 'AI_BAD_JSON');
+      // Unescaped line breaks or control characters inside JSON strings
+      try {
+        const sanitized = withoutTrailingCommas.replace(/[\u0000-\u001F]+/g, (m) => {
+          if (m === '\n') return '\\n';
+          if (m === '\r') return '\\r';
+          if (m === '\t') return '\\t';
+          return '';
+        });
+        return JSON.parse(sanitized);
+      } catch {
+        throw new AppError('AI response was not valid JSON.', 502, 'AI_BAD_JSON');
+      }
     }
   }
 };
@@ -106,7 +144,7 @@ export const completeJson = async (options) => {
 };
 
 export const completeText = async (options) => {
-  const { content, model } = await chat({ ...options, maxTokens: options.maxTokens ?? 900 });
+  const { content, model } = await chat({ ...options, maxTokens: options.maxTokens ?? 1200, jsonMode: false });
   return { text: content.trim(), model };
 };
 

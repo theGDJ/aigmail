@@ -3,7 +3,7 @@
 //
 // Purpose: the whole application (sync, parsing, AI, analytics, digest) can be
 // demonstrated and tested without Google credentials. Read state is owned by
-// PostgreSQL (Email.isRead), so setRead is a no-op that just confirms success.
+// MongoDB (Email.isRead), so setRead is a no-op that just confirms success.
 // ---------------------------------------------------------------------------
 import { AppError } from '../../lib/errors.js';
 import { cleanEmailBody } from '../emailParser.js';

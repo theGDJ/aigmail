@@ -4,8 +4,8 @@ A full-stack, production-shaped email management application that reads your inb
 questions that matter: **what is this email about, what do I need to do, by when, how important is it,
 and do I need to reply?**
 
-Built as an applied-research system (React + Express + PostgreSQL + Prisma + Google OAuth/Gmail API +
-OpenAI) that also runs **completely offline** with a deterministic analysis engine and a seeded mailbox,
+Built as an applied-research system (React + Express + MongoDB + Prisma + Google OAuth/Gmail API +
+OpenAI / Groq) that also runs **completely offline** with a deterministic analysis engine and a seeded mailbox,
 so every feature is demonstrable without any external credentials.
 
 ---
@@ -61,8 +61,8 @@ so every feature is demonstrable without any external credentials.
 │ Email pipeline: raw → decode → MIME walk → HTML→text → strip quotes/signature →   │
 │                 normalize whitespace → clean body → AI                            │
 ├──────────────────────────────────────────────────────────────────────────────────┤
-│ Prisma → PostgreSQL (User, EmailAccount, Email, Summary, ActionItem, Deadline,    │
-│                       Translation, Preference, Digest, Notification)              │
+│ Prisma → MongoDB (User, EmailAccount, Email, Summary, ActionItem, Deadline,       │
+│                      Translation, Preference, Digest, Notification)              │
 └──────────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -71,7 +71,7 @@ so every feature is demonstrable without any external credentials.
 `aiService` exposes the same functions regardless of configuration, and **every** response is validated
 against a zod schema before it can be stored:
 
-- **OpenAI mode** (`OPENAI_API_KEY` set): one structured JSON request per email, one automatic repair
+- **AI mode** (`OPENAI_API_KEY` or `GROQ_API_KEY` set): one structured JSON request per email, one automatic repair
   attempt if the JSON or the shape is invalid, then a safe fallback.
 - **Local mode** (default, no key): a rule-based engine in `localAnalyzer.js` — deterministic (same input →
   same output), no network, no cost, suitable for reproducible offline experiments.
@@ -84,7 +84,7 @@ consistent with the stated reasons.
 
 ## 3. Quick start
 
-Prerequisites: Node ≥ 20, PostgreSQL ≥ 14 (running locally).
+Prerequisites: Node ≥ 20, MongoDB (local instance or MongoDB Atlas).
 
 ```bash
 # 1. install (npm workspaces: client + server)
@@ -92,17 +92,15 @@ npm install
 
 # 2. configure the backend
 cp server/.env.example server/.env
-#   → set DATABASE_URL and a fresh SESSION_SECRET:
+#   → set DATABASE_URL (e.g. mongodb://localhost:27017/ai_mail_summarizer)
+#   → set a fresh SESSION_SECRET:
 #     node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"
 
-# 3. create the database (once)
-createdb ai_mail_summarizer
-
-# 4. schema + demo data (24 realistic emails, analyzed, with tasks/deadlines/digest)
-npm run db:migrate
+# 3. push schema & indexes to MongoDB + demo data (24 realistic emails, analyzed, with tasks/deadlines/digest)
+npm run db:push
 npm run db:seed
 
-# 5. start both apps (Express :4000, Vite :5173)
+# 4. start both apps (Express :4000, Vite :5173)
 npm run dev
 ```
 

@@ -7,7 +7,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "mongodb"
   url      = env("DATABASE_URL")
 }
 
@@ -67,7 +67,7 @@ enum RiskLevel {
 }
 
 model User {
-  id           String   @id @default(cuid())
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
   name         String
   email        String   @unique
   profileImage String?
@@ -79,17 +79,15 @@ model User {
   preference    Preference?
   notifications Notification[]
   digests       Digest[]
-
-  @@index([email])
 }
 
 model EmailAccount {
-  id           String    @id @default(cuid())
-  userId       String
+  id           String    @id @default(auto()) @map("_id") @db.ObjectId
+  userId       String    @db.ObjectId
   provider     Provider  @default(GMAIL)
   email        String
-  accessToken  String?   @db.Text
-  refreshToken String?   @db.Text
+  accessToken  String?
+  refreshToken String?
   tokenExpiry  DateTime?
   scope        String?
   historyId    String?
@@ -105,15 +103,15 @@ model EmailAccount {
 }
 
 model Email {
-  id             String   @id @default(cuid())
-  accountId      String
+  id             String   @id @default(auto()) @map("_id") @db.ObjectId
+  accountId      String   @db.ObjectId
   externalId     String
   threadId       String?
   sender         String
   senderName     String?
   recipient      String?
   subject        String
-  body           String   @db.Text
+  body           String
   snippet        String?
   receivedAt     DateTime
   isRead         Boolean  @default(false)
@@ -134,9 +132,9 @@ model Email {
 }
 
 model Summary {
-  id                String        @id @default(cuid())
-  emailId           String        @unique
-  summary           String        @db.Text
+  id                String        @id @default(auto()) @map("_id") @db.ObjectId
+  emailId           String        @unique @db.ObjectId
+  summary           String
   keyPoints         String[]      @default([])
   priority          Priority      @default(MEDIUM)
   category          Category      @default(OTHER)
@@ -163,8 +161,8 @@ model Summary {
 }
 
 model ActionItem {
-  id        String    @id @default(cuid())
-  summaryId String
+  id        String    @id @default(auto()) @map("_id") @db.ObjectId
+  summaryId String    @db.ObjectId
   task      String
   deadline  DateTime?
   dueText   String?
@@ -179,8 +177,8 @@ model ActionItem {
 }
 
 model Deadline {
-  id          String       @id @default(cuid())
-  summaryId   String
+  id          String       @id @default(auto()) @map("_id") @db.ObjectId
+  summaryId   String       @db.ObjectId
   description String
   date        DateTime?
   dateText    String?
@@ -194,11 +192,11 @@ model Deadline {
 }
 
 model Translation {
-  id             String       @id @default(cuid())
-  emailId        String?
-  summaryId      String?
+  id             String       @id @default(auto()) @map("_id") @db.ObjectId
+  emailId        String?      @db.ObjectId
+  summaryId      String?      @db.ObjectId
   targetLanguage LanguageCode
-  content        String       @db.Text
+  content        String
   engine         String       @default("local")
   createdAt      DateTime     @default(now())
 
@@ -210,8 +208,8 @@ model Translation {
 }
 
 model Preference {
-  id                    String        @id @default(cuid())
-  userId                String        @unique
+  id                    String        @id @default(auto()) @map("_id") @db.ObjectId
+  userId                String        @unique @db.ObjectId
   summaryLength         SummaryLength @default(MEDIUM)
   language              LanguageCode  @default(EN)
   notificationEnabled   Boolean       @default(true)
@@ -228,9 +226,9 @@ model Preference {
 }
 
 model Digest {
-  id        String   @id @default(cuid())
-  userId    String
-  forDate   DateTime @db.Date
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String   @db.ObjectId
+  forDate   DateTime
   content   Json
   createdAt DateTime @default(now())
 
@@ -241,11 +239,11 @@ model Digest {
 }
 
 model Notification {
-  id        String    @id @default(cuid())
-  userId    String
-  emailId   String?
+  id        String    @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String    @db.ObjectId
+  emailId   String?   @db.ObjectId
   title     String
-  body      String    @db.Text
+  body      String
   priority  Priority  @default(MEDIUM)
   riskLevel RiskLevel @default(LOW)
   isRead    Boolean   @default(false)

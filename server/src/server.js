@@ -13,19 +13,19 @@ const server = app.listen(env.PORT, async () => {
     env: env.NODE_ENV,
     clientOrigin: env.CLIENT_ORIGIN,
     googleOAuth: features.googleOAuth,
-    aiProvider: features.openai ? 'openai' : 'local (deterministic fallback)',
+    aiProvider: features.ai ? (features.groq ? 'groq' : 'openai') : 'local (deterministic fallback)',
     demoLogin: features.demoLogin,
   });
 
   if (!features.googleOAuth) {
     log.warn('Google OAuth not configured - Gmail sign-in disabled, demo mailbox available.');
   }
-  if (!features.openai) {
-    log.warn('OPENAI_API_KEY not set - using the built-in local analysis engine.');
+  if (!features.ai) {
+    log.warn('AI credentials not set - using the built-in local analysis engine.');
   }
 
   try {
-    await prisma.$queryRaw`SELECT 1`;
+    await prisma.$runCommandRaw({ ping: 1 });
     log.info('Database connection verified');
   } catch (err) {
     log.error('Database unreachable - check DATABASE_URL', { message: err.message });

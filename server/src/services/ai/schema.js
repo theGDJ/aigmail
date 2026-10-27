@@ -24,6 +24,24 @@ const listOfStrings = (max, maxLen) =>
       [...new Set(arr.map((s) => String(s).trim()).filter(Boolean))].slice(0, max).map((s) => s.slice(0, maxLen)),
     );
 
+const caseInsensitiveEnum = (allowed) =>
+  z.preprocess((val) => {
+    if (typeof val === 'string') {
+      const upper = val.toUpperCase().trim();
+      if (allowed.includes(upper)) return upper;
+    }
+    return val;
+  }, z.enum(allowed));
+
+const booleanCoerce = z.preprocess((val) => {
+  if (typeof val === 'string') {
+    const lower = val.toLowerCase().trim();
+    if (lower === 'true' || lower === 'yes' || lower === '1') return true;
+    if (lower === 'false' || lower === 'no' || lower === '0') return false;
+  }
+  return val;
+}, z.boolean().optional().default(false));
+
 export const actionItemSchema = z.object({
   task: nonEmpty(400),
   deadline_text: optionalText,
@@ -32,7 +50,7 @@ export const actionItemSchema = z.object({
 export const deadlineSchema = z.object({
   description: nonEmpty(300),
   date_text: optionalText,
-  type: z.enum(DEADLINE_TYPES).optional().default('GENERAL'),
+  type: caseInsensitiveEnum(DEADLINE_TYPES).optional().default('GENERAL'),
 });
 
 export const analysisSchema = z.object({
@@ -40,13 +58,13 @@ export const analysisSchema = z.object({
   key_points: listOfStrings(8, 300),
   action_items: z.array(actionItemSchema).optional().default([]),
   deadlines: z.array(deadlineSchema).optional().default([]),
-  priority: z.enum(PRIORITIES).optional().default('MEDIUM'),
-  category: z.enum(CATEGORIES).optional().default('OTHER'),
+  priority: caseInsensitiveEnum(PRIORITIES).optional().default('MEDIUM'),
+  category: caseInsensitiveEnum(CATEGORIES).optional().default('OTHER'),
   importance_score: z.coerce.number().min(0).max(100).optional().default(50),
   importance_reasons: listOfStrings(6, 200),
-  requires_reply: z.boolean().optional().default(false),
+  requires_reply: booleanCoerce,
   reply_rationale: optionalText,
-  risk_level: z.enum(RISK_LEVELS).optional().default('LOW'),
+  risk_level: caseInsensitiveEnum(RISK_LEVELS).optional().default('LOW'),
   risk_reasons: listOfStrings(8, 200),
 });
 

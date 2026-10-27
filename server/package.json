@@ -3,16 +3,17 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "AI Mail Summarizer backend - Express, Prisma, PostgreSQL, Gmail API, OpenAI",
+  "description": "AI Mail Summarizer backend - Express, Prisma, MongoDB, Gmail API, OpenAI / Groq",
   "main": "src/server.js",
   "scripts": {
     "dev": "node --watch src/server.js",
     "start": "node src/server.js",
     "build": "prisma generate",
+    "mongo": "node scripts/run-mongo.js",
     "test": "vitest run",
     "test:watch": "vitest",
     "db:generate": "prisma generate",
-    "db:migrate": "prisma migrate dev --name init",
+    "db:migrate": "prisma db push",
     "db:push": "prisma db push",
     "db:seed": "node prisma/seed.js",
     "db:studio": "prisma studio"
@@ -33,6 +34,7 @@
     "zod": "^3.24.1"
   },
   "devDependencies": {
+    "mongodb-memory-server": "^11.3.0",
     "prisma": "^6.2.1",
     "supertest": "^7.0.0",
     "vitest": "^2.1.8"

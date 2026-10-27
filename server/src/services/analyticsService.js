@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------------
 // Analytics (spec section 12).
-// Aggregations run in PostgreSQL where possible; the per-day series is bucketed
+// Aggregations run in the database where possible; the per-day series is bucketed
 // in JS because it needs timezone-correct day boundaries.
 // ---------------------------------------------------------------------------
 import prisma from '../lib/prisma.js';

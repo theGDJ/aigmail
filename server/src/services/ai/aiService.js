@@ -18,13 +18,13 @@ import {
   PROMPT_VERSION,
 } from './prompts.js';
 import { validateAnalysis } from './schema.js';
-import { completeJson, isEnabled as aiEnabled } from './openaiClient.js';
+import { completeJson, completeText, getActiveProvider, isEnabled as aiEnabled } from './openaiClient.js';
 import localAnalyzer from './localAnalyzer.js';
 import { LANGUAGES } from '../../config/constants.js';
 
 const log = createLogger('ai');
 
-export const engineName = () => (aiEnabled() ? 'openai' : 'local');
+export const engineName = () => (aiEnabled() ? getActiveProvider() : 'local');
 export const isAiLive = () => aiEnabled();
 export const promptVersion = PROMPT_VERSION;
 
@@ -36,6 +36,11 @@ export const promptVersion = PROMPT_VERSION;
  *  Returns null when the text contains no date - we never invent one. */
 const resolveDate = (text, reference) => {
   if (!text) return null;
+  // If the string is already a valid ISO date or YYYY-MM-DD, parse directly
+  if (/^\d{4}-\d{2}-\d{2}/.test(String(text).trim())) {
+    const direct = new Date(text);
+    if (!isNaN(direct.getTime())) return direct;
+  }
   const { date } = localAnalyzer.parseDateMention(text, reference);
   return date || null;
 };
@@ -88,7 +93,7 @@ export const analyzeEmail = async (email, { summaryLength = 'MEDIUM', language =
       user: extraInstructions
         ? `${buildAnalysisPrompt({ email, summaryLength, language })}\n\nYour previous answer was invalid: ${extraInstructions}\nReturn corrected JSON only.`
         : buildAnalysisPrompt({ email, summaryLength, language }),
-      maxTokens: 1600,
+      maxTokens: 2500,
       temperature: 0.1,
     });
     return { data, model };
@@ -98,7 +103,7 @@ export const analyzeEmail = async (email, { summaryLength = 'MEDIUM', language =
     const first = await requestOnce();
     const validation = validateAnalysis(first.data);
     if (validation.ok) {
-      return { analysis: validation.data, engine: 'openai', model: first.model, promptVersion: PROMPT_VERSION };
+      return { analysis: validation.data, engine: engineName(), model: first.model, promptVersion: PROMPT_VERSION };
     }
 
     // One repair attempt, then fall back locally.
@@ -108,7 +113,7 @@ export const analyzeEmail = async (email, { summaryLength = 'MEDIUM', language =
     );
     const retryValidation = validateAnalysis(retry.data);
     if (retryValidation.ok) {
-      return { analysis: retryValidation.data, engine: 'openai', model: retry.model, promptVersion: PROMPT_VERSION };
+      return { analysis: retryValidation.data, engine: engineName(), model: retry.model, promptVersion: PROMPT_VERSION };
     }
     log.error('AI response still invalid after retry - using local engine', {
       issues: retryValidation.issues.slice(0, 3),
@@ -268,7 +273,7 @@ Return JSON: {"reply": "..."}`,
         temperature: 0.5,
       });
       const reply = typeof data?.reply === 'string' ? data.reply.trim() : '';
-      if (reply) return { reply, engine: 'openai', model, tone };
+      if (reply) return { reply, engine: engineName(), model, tone };
     } catch (err) {
       log.warn('Reply generation failed - using local template', { code: err.code });
     }
@@ -289,14 +294,15 @@ const translateText = async (text, targetLanguage) => {
 
   if (aiEnabled()) {
     try {
-      const { data } = await completeJson({
-        system: 'You are a precise translator. Return JSON only: {"translation": "..."}',
+      const { text: translated } = await completeText({
+        system:
+          'You are a precise, professional translator. Preserve formatting, line breaks, names, dates, email addresses and numbers exactly. Return only the translated text without extra formatting or markdown fences.',
         user: buildTranslationPrompt({ text: source, targetLanguage }),
-        maxTokens: 2500,
+        maxTokens: 3000,
         temperature: 0,
       });
-      if (typeof data?.translation === 'string' && data.translation.trim()) {
-        return { content: data.translation.trim(), engine: 'openai' };
+      if (translated) {
+        return { content: translated, engine: engineName() };
       }
     } catch (err) {
       log.warn('Translation failed - using glossary fallback', { code: err.code });

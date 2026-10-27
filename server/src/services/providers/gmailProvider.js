@@ -8,7 +8,7 @@
 //   sendMessage(account, { to, subject, body, threadId, inReplyTo })
 //   getProfile(account) -> { email }
 //
-// OAuth tokens are refreshed transparently and persisted back to PostgreSQL,
+// OAuth tokens are refreshed transparently and persisted back to MongoDB,
 // so a rotated access token survives process restarts.
 // ---------------------------------------------------------------------------
 import { google } from 'googleapis';

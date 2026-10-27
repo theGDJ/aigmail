@@ -7,7 +7,7 @@ export default defineConfig({
     globals: true,
     env: {
       NODE_ENV: 'test',
-      DATABASE_URL: process.env.DATABASE_URL || 'postgresql://localhost:5432/ai_mail_summarizer',
+      DATABASE_URL: process.env.DATABASE_URL || 'mongodb://localhost:27017/ai_mail_summarizer',
       SESSION_SECRET: 'test-secret-value-not-used-in-production',
     },
   },

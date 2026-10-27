@@ -24,7 +24,7 @@ const main = async () => {
   console.log(`• demo user      : ${user.email} (${user.id})`);
   console.log(`• email account  : ${account.provider} <${account.email}>`);
   console.log(`• preferences    : ${preference.summaryLength} / ${preference.language}`);
-  console.log(`• AI engine      : ${aiEngine === 'openai' ? 'OpenAI' : 'local deterministic engine'}\n`);
+  console.log(`• AI engine      : ${aiEngine !== 'local' ? (aiEngine === 'groq' ? 'Groq' : 'OpenAI') : 'local deterministic engine'}\n`);
 
   const sync = await emailService.syncEmails(user.id, { maxResults: 100 });
   console.log(`• sync           : fetched ${sync.fetched}, created ${sync.created}, updated ${sync.updated}`);

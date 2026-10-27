@@ -48,6 +48,21 @@ describe('validateAnalysis', () => {
     expect(data.priority).toBe('MEDIUM');
     expect(data.risk_level).toBe('LOW');
   });
+
+  it('normalizes lowercase enum values from models', () => {
+    const result = validateAnalysis({ ...valid, priority: 'urgent', category: 'work', risk_level: 'low' });
+    expect(result.ok).toBe(true);
+    expect(result.data.priority).toBe('URGENT');
+    expect(result.data.category).toBe('WORK');
+    expect(result.data.risk_level).toBe('LOW');
+  });
+
+  it('allows null reply_rationale when requires_reply is false', () => {
+    const result = validateAnalysis({ ...valid, requires_reply: false, reply_rationale: null });
+    expect(result.ok).toBe(true);
+    expect(result.data.requires_reply).toBe(false);
+    expect(result.data.reply_rationale).toBeNull();
+  });
 });
 
 describe('parseJsonResponse', () => {
@@ -65,6 +80,11 @@ describe('parseJsonResponse', () => {
 
   it('extracts JSON embedded in prose', () => {
     expect(parseJsonResponse('Here you go: {"a":1} — done').a).toBe(1);
+  });
+
+  it('handles unescaped control characters in JSON strings', () => {
+    const raw = '{"summary": "Line 1\nLine 2"}';
+    expect(parseJsonResponse(raw).summary).toBe('Line 1\nLine 2');
   });
 
   it('throws a typed error when there is no JSON at all', () => {

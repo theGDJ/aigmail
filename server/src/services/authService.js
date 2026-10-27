@@ -116,7 +116,7 @@ export const logout = () => ({ success: true });
 export const authStatus = () => ({
   googleOAuthEnabled: features.googleOAuth,
   demoLoginEnabled: features.demoLogin,
-  aiProvider: features.openai ? 'openai' : 'local',
+  aiProvider: features.ai ? (features.groq ? 'groq' : 'openai') : 'local',
   ...(env.isProd ? {} : { clientOrigin: env.CLIENT_ORIGIN }),
 });
 
